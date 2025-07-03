@@ -14,7 +14,6 @@
 '''
 
 
-
 import numpy as np
 import pandas as pd
 import serial
@@ -48,12 +47,25 @@ label_dict = {
     4: '알 수 없음'
 }
 
+# ===== Bandpass 필터 추가 =====
+def bandpass_filter(signal, fs=FS, lowcut=0.5, highcut=40):
+    nyq = fs / 2
+    b, a = butter(2, [lowcut / nyq, highcut / nyq], btype='band')
+    return filtfilt(b, a, signal)
+
 # ===== ECG 필터링 함수 =====
-def filter_ecg(signal, fs=FS):
-    b1, a1 = butter(N=4, Wn=1/(fs/2), btype='high')
-    hp = filtfilt(b1, a1, signal)
-    b2, a2 = iirnotch(w0=60/(fs/2), Q=30)
-    return filtfilt(b2, a2, hp)
+def filter_ecg(signal, fs=250):
+    # 강한 Bandpass (0.5~40Hz)
+    nyq = fs / 2
+    b, a = butter(2, [0.5 / nyq, 40 / nyq], btype='band')
+    filtered = filtfilt(b, a, signal)
+
+    # Notch 필터 (60Hz 제거)
+    w0 = 60 / nyq
+    b_notch, a_notch = iirnotch(w0, Q=50)
+    filtered = filtfilt(b_notch, a_notch, filtered)
+
+    return filtered
 
 # ===== ECG 예측 및 저장 함수 =====
 def get_ecg_prediction(serial_port=ECG_SERIAL_PORT, baud_rate=ECG_BAUD_RATE):
@@ -65,7 +77,14 @@ def get_ecg_prediction(serial_port=ECG_SERIAL_PORT, baud_rate=ECG_BAUD_RATE):
         with serial.Serial(serial_port, baud_rate, timeout=1) as ser:
             while len(buffer) < BUFFER_SIZE:
                 line = ser.readline().decode('utf-8', errors='replace').strip()
-                if not line or 'DATA' not in line:
+                print(f"📡 수신 데이터: {repr(line)}")
+
+                try:
+                    # "DATA,TIME,190" → 마지막 숫자만 가져옴
+                    val = int(line.split(',')[-1])
+                    buffer.append(val)
+                    print(f"⏳ 수집 중... ({len(buffer)}/{BUFFER_SIZE})")
+                except ValueError:
                     continue
                 try:
                     val = int(line.split(',')[-1])
@@ -82,59 +101,64 @@ def get_ecg_prediction(serial_port=ECG_SERIAL_PORT, baud_rate=ECG_BAUD_RATE):
     norm     = (filtered - filtered.mean()) / filtered.std()
 
     # 3) R-peak 검출
-    peaks, props = find_peaks(norm, height=0.3, distance=int(0.25*FS), prominence=0.4)
+    peaks, props = find_peaks(norm, height=0.3, distance=int(0.25 * FS), prominence=0.4)
     print(f"✅ 전체 R파 개수: {len(peaks)}")
     if len(peaks) == 0:
         raise RuntimeError("ECG: R파를 찾을 수 없습니다.")
 
-    # 4) 상위 TOP_K개 선택
-    top_idx   = np.argsort(props["prominences"])[-TOP_K:]
-    top_peaks = peaks[top_idx]
+    # 4) 유효한 R파만 필터링 (슬라이싱 범위 벗어나지 않는 것만)
+    valid_peaks = []
+    valid_proms = []
+    half_win = WINDOW_SIZE // 2
 
-    # 5) 윈도우별 저장 & 예측 & 시각화 저장
-    preds = []
-    for i, p in enumerate(top_peaks, start=1):
-        start = p - WINDOW_SIZE//2
-        end   = p + WINDOW_SIZE//2 + 1
-        if start < 0 or end > len(norm):
-            print(f"❗ 윈도우 {i} 슬라이싱 불가: start={start}, end={end}")
-            continue
-        win = norm[start:end]
-        if len(win) != WINDOW_SIZE:
-            print(f"⚠️ 윈도우 {i} 길이 {len(win)} → 건너뜀")
-            continue
+    for p, prom in zip(peaks, props["prominences"]):
+        if p - half_win >= 0 and p + half_win + 1 <= len(norm):
+            valid_peaks.append(p)
+            valid_proms.append(prom)
 
-        # CSV 저장
-        ts = datetime.datetime.now().strftime('%Y%m%d_%H%M%S_%f')
-        csv_name = f"ecg_window_{i}_{ts}.csv"
-        csv_path = os.path.join(SAVE_PATH_ECG, csv_name)
-        pd.DataFrame(win).T.to_csv(csv_path, index=False, header=False)
+    if not valid_peaks:
+        raise RuntimeError("ECG: 윈도우 범위 내에 포함되는 R파가 없습니다.")
 
-        # 예측
-        inp   = win.reshape(1, WINDOW_SIZE, 1)
-        prob  = model.predict(inp, verbose=0)
-        lab   = int(np.argmax(prob))
-        preds.append(lab)
-        print(f"🪟 윈도우 {i}: 예측 → {label_dict[lab]} | 저장: {csv_path}")
+    # 5) 가장 높은 prominence를 가진 R파 하나 선택
+    main_peak_idx = np.argmax(valid_proms)
+    main_peak = valid_peaks[main_peak_idx]
+    print(f"⭐ 선택된 중심 R파 인덱스: {main_peak} (prominence={valid_proms[main_peak_idx]:.2f})")
 
-        # 시각화 저장 (영어 제목)
-        fig, ax = plt.subplots(figsize=(8, 3))
-        ax.plot(win)
-        ax.set_title(f"Window {i} ECG Waveform")
-        ax.set_xlabel("Sample")
-        ax.set_ylabel("Normalized Amplitude")
-        img_name = f"ecg_window_{i}_{ts}.png"
-        img_path = os.path.join(SAVE_PATH_ECG, img_name)
-        fig.savefig(img_path)
-        plt.close(fig)
-        print(f"🖼️ 윈도우 {i} 그래프 저장: {img_path}")
+    # 6) 윈도우 생성 (무조건 길이 187로)
+    start = main_peak - half_win
+    end   = main_peak + half_win + 1
+    win = norm[start:end]
 
-    if not preds:
-        raise RuntimeError("ECG: 예측 가능한 윈도우가 없습니다.")
+    if len(win) != WINDOW_SIZE:
+        raise RuntimeError(f"슬라이싱된 윈도우 길이 오류: {len(win)}")
 
-    # 6) 다수결 최종 결과
-    final_label = max(set(preds), key=preds.count)
-    return label_dict[final_label]
+    # 7) 저장 및 예측
+    ts = datetime.datetime.now().strftime('%Y%m%d_%H%M%S_%f')
+    csv_name = f"ecg_window_{ts}.csv"
+    csv_path = os.path.join(SAVE_PATH_ECG, csv_name)
+    pd.DataFrame(win).T.to_csv(csv_path, index=False, header=False)
+
+    inp   = win.reshape(1, WINDOW_SIZE, 1)
+    prob  = model.predict(inp, verbose=0)
+    lab   = int(np.argmax(prob))
+    print(f"🪟 예측 → {label_dict[lab]} | 저장: {csv_path}")
+
+    # 8) 시각화 저장
+    fig, ax = plt.subplots(figsize=(8, 3))
+    ax.plot(win)
+    ax.axvline(WINDOW_SIZE//2, color='red', linestyle='--', label='R peak center')
+    ax.set_title("ECG Window with PQRS Complex")
+    ax.set_xlabel("Sample")
+    ax.set_ylabel("Normalized Amplitude")
+    ax.legend()
+    img_name = f"ecg_window_{ts}.png"
+    img_path = os.path.join(SAVE_PATH_ECG, img_name)
+    fig.savefig(img_path)
+    plt.close(fig)
+    print(f"🖼️ 그래프 저장: {img_path}")
+
+    # 9) 최종 라벨 반환
+    return label_dict[lab]
 
 # ===== 체온 측정 함수 =====
 def get_temperature(serial_port=TEMP_SERIAL_PORT, baud_rate=TEMP_BAUD_RATE):
@@ -194,14 +218,14 @@ def dev_get_data():
 
 # ===== 메인 예시 =====
 if __name__ == "__main__":
-        
+    
     # ECG 예측
     try:
         ecg_result = get_ecg_prediction()
         print("▶ 최종 ECG 예측 결과:", ecg_result)
     except RuntimeError as e:
         print("❌", e)
-
+    
     # 체온 측정
     try:
         temp = get_temperature()
