@@ -26,10 +26,10 @@ import os
 import datetime
 
 # ===== 공통 설정 =====
-ECG_SERIAL_PORT   = 'COM3'
+ECG_SERIAL_PORT   = 'COM17' # 새로 산거
 ECG_BAUD_RATE     = 9600
-TEMP_SERIAL_PORT  = 'COM14'
-TEMP_BAUD_RATE    = 9600
+TEMP_SERIAL_PORT  = 'COM3' # 기존
+TEMP_BAUD_RATE    = 9600 
 MODEL_PATH        = r"C:\Users\user\python_project\AI_healthcare_pr\15_prome_arrythmia_healthcare\models\arrythmia_prediction_model.keras"
 BUFFER_SIZE       = 1000
 WINDOW_SIZE       = 187
@@ -160,16 +160,43 @@ def get_ecg_prediction(serial_port=ECG_SERIAL_PORT, baud_rate=ECG_BAUD_RATE):
     # 9) 최종 라벨 반환
     return label_dict[lab]
 
-# ===== 체온 측정 함수 =====
-def get_temperature(serial_port=TEMP_SERIAL_PORT, baud_rate=TEMP_BAUD_RATE):
+# ===== 체온 측정 함수 (보정값 적용 기능 포함) =====
+def get_temperature(serial_port=TEMP_SERIAL_PORT, baud_rate=TEMP_BAUD_RATE, correction=0.0):
+    """
+    체온 측정 함수
+    - serial_port: 아두이노 포트
+    - baud_rate: 통신 속도
+    - correction: 오차 보정값 (예: -0.5를 넣으면 측정값에서 0.5도 낮춰서 반환)
+    """
     try:
         with serial.Serial(serial_port, baud_rate, timeout=1) as arduino:
-            time.sleep(2)
-            arduino.write(b'R')
-            time.sleep(0.1)
-            data = arduino.readline().decode().strip()
-            temp = float(data)
-            return round(temp, 1)
+            time.sleep(2)  # 포트 초기화 대기
+
+            print("[체온 측정 중]")
+
+            last_temp = None
+
+            for _ in range(5):
+                arduino.write(b'R')             # 측정 요청
+                time.sleep(0.1)
+                data = arduino.readline().decode().strip()
+
+                try:
+                    temp = float(data)
+                    last_temp = temp
+                except ValueError:
+                    pass  # 실패한 값은 무시
+
+                time.sleep(1)  # 1초 대기
+
+            if last_temp is not None:
+                corrected_temp = round(last_temp + correction, 1)
+                print("[체온 측정 완료]")
+                print(f"측정된 체온 (보정 적용): {corrected_temp}°C")
+                return corrected_temp
+            else:
+                raise RuntimeError("정상적인 체온을 가져오지 못했습니다.")
+
     except (serial.SerialException, ValueError) as e:
         raise RuntimeError(f"체온 읽기 오류: {e}")
 
@@ -228,7 +255,7 @@ if __name__ == "__main__":
     
     # 체온 측정
     try:
-        temp = get_temperature()
+        temp = get_temperature(correction = 5)
         print("▶ 현재 체온:", temp, "°C")
     except RuntimeError as e:
         print("❌", e)
