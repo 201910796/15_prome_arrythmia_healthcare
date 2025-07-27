@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
 from typing import List
-from ecg_model import predict_ecg_from_array
+from ecg_temp_model import predict_ecg_from_array
 
 app = FastAPI()
 
