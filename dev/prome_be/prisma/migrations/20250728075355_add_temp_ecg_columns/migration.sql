@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE `chat_comments` ADD COLUMN `ecg` INTEGER NULL DEFAULT -1,
+    ADD COLUMN `temp` DOUBLE NULL DEFAULT 0;
