@@ -5,12 +5,13 @@ from prompt import PROMPT
 from datasets import DATASETS
 from concurrent.futures import ThreadPoolExecutor
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_community.document_loaders import WebBaseLoader, PyMuPDFLoader, TextLoader
+from langchain_community.document_loaders import WebBaseLoader, PyMuPDFLoader, TextLoader, DirectoryLoader, JSONLoader
 from langchain_chroma import Chroma
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain.memory import ConversationBufferMemory
 from langchain_core.prompts import PromptTemplate
 from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_openai import ChatOpenAI
 from langchain.chains import ConversationalRetrievalChain
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
@@ -23,10 +24,14 @@ load_dotenv()
 os.environ["HF_HUB_DISABLE_SYMLINKS_WARNING"] = "1"
 
 API_KEY = os.environ.get("API_KEY")
+OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 DATASET_FILEPATH = "./datasets"
 DATABASE_FILEPATH = "./chroma_db"
 CHUNK_SIZE = 2500
-CHUNK_OVERLAP = 20
+CHUNK_OVERLAP = 10
+
+# def json_loader_with_schema(file_path):
+#     return JSONLoader(file_path=file_path, jq_schema=".answer[]")
 
 # ======================== Load Document ========================
 def load_documents(files):
@@ -45,6 +50,10 @@ def load_documents(files):
         loader = PyMuPDFLoader(DATASET_FILEPATH + "/" + file_path)
     elif file_type == "TEXT":
         loader = TextLoader(DATASET_FILEPATH + "/" + file_path, encoding="utf-8")
+    elif file_type == "DIR_TXT":
+        loader = DirectoryLoader(DATASET_FILEPATH + "/" + file_path, glob="**/*.txt", loader_cls=TextLoader, loader_kwargs={"encoding": "utf-8"})
+    # elif file_type == "DIR_JSON":
+    #     loader = DirectoryLoader(DATASET_FILEPATH + "/" + file_path, glob="**/*.json", loader_cls=json_loader_with_schema)
     else:
         print("Invalid File Type:", file_path)
     return loader.load()
@@ -59,7 +68,10 @@ def make_document(files, chunk_size, chunk_overlap):
     """파일을 데이터베이스에 저장하기 위해 CHUNK로 분할"""
     with ThreadPoolExecutor() as executor:
         results = executor.map(load_documents, files)
+    
     docs = [preprocessing(doc) for result in results for doc in result]
+    print("문서 수 :", len(docs))
+
     text_splitter = RecursiveCharacterTextSplitter(chunk_size=chunk_size, chunk_overlap=chunk_overlap)
     split_documents = text_splitter.split_documents(docs)
     return split_documents
@@ -68,7 +80,8 @@ def make_document(files, chunk_size, chunk_overlap):
 # ======================== Build Database ========================
 def make_database(split_documents):
     """데이터베이스 구축"""
-    embeddings = HuggingFaceEmbeddings(model_name='intfloat/multilingual-e5-small')
+    embeddings = HuggingFaceEmbeddings(model_name='jhgan/ko-sbert-nli')
+    # embeddings = HuggingFaceEmbeddings(model_name='intfloat/multilingual-e5-small')
 
     if os.path.exists(DATABASE_FILEPATH):
         vector_store = Chroma(persist_directory=DATABASE_FILEPATH, embedding_function=embeddings)
@@ -93,10 +106,17 @@ def make_prompt():
 
 def make_model():
     """LLM 모델 생성"""
-    return ChatGoogleGenerativeAI(
-        model="gemini-2.5-flash",
-        api_key=API_KEY
+    return ChatOpenAI(
+        model="gpt-4-1106-preview",
+        temperature=0.7,
+        max_tokens=1024,
+        openai_api_key=OPENAI_API_KEY
     )
+    # return ChatGoogleGenerativeAI(
+    #     model="gemini-2.5-flash",
+    #     api_key=API_KEY
+    # )
+
 
 user_memories = {}
 def make_memory(user_id):
@@ -117,34 +137,6 @@ def run_ai(question, ecg, temp, chain):
     return chain.invoke({"question": f"{question}\n(환자의 심전도 수치: {ecg}, 체온: {temp}도)"})["answer"]
 
 
-# ======================== Main ========================
-# if __name__ == "__main__":
-#     documents = make_document(files=DATASETS, chunk_size=CHUNK_SIZE, chunk_overlap=CHUNK_OVERLAP)
-#     # documents = None
-#     retriever = make_database(documents)
-#     prompt = make_prompt()
-#     model = make_model()
-#     memory = make_memory()
-#     chain = make_chain(model, retriever, memory, prompt)
-
-#     print("""> 안녕하세요, 의료용 AI Agent입니다. 몸이 불편한 곳이 있거나, 건강과 관련하여 궁금한 점이 있으면 물어봐주세요!""")
-#     while True:
-#         question = input(">> ")
-#         if question == "</종료>":
-#             break
-#         answer = run_ai(question, chain)
-#         if "</종료>" in answer:  # 종료하는 경우
-#             print(">", answer.replace("</종료>", ""))
-#             break
-#         elif "</진단>" in answer:  # 진단으로 넘어가는 경우
-#             print(">", answer.replace("</진단>", ""))
-#             print("심전도/체온 측정을 진행합니다 ···")
-#             break
-#         else:
-#             print(">", answer)
-#             print()
-
-
 # ======================== FastAPI ========================
 app = FastAPI()
 app.add_middleware(
@@ -159,34 +151,45 @@ class LLMRequest(BaseModel):
     question: str
     ecg: int
     temp: float
-    user_id: str
+    user_id: int
+    chat_id: int
 
-# documents = make_document(files=DATASETS, chunk_size=CHUNK_SIZE, chunk_overlap=CHUNK_OVERLAP)
+
+# for DATASET in DATASETS:
+#     print(DATASET)
+#     documents = make_document(files=(DATASET,), chunk_size=CHUNK_SIZE, chunk_overlap=CHUNK_OVERLAP)
+#     retriever = make_database(documents)
+#     print("└> 완료")
+
 documents = None
+if not os.path.exists(DATABASE_FILEPATH):
+    documents = make_document(files=DATASETS, chunk_size=CHUNK_SIZE, chunk_overlap=CHUNK_OVERLAP)
 retriever = make_database(documents)
 prompt = make_prompt()
 model = make_model()
 
+
 @app.post("/ai_rag")
 async def chat(request: LLMRequest):
-    '''응답(Response) 형태 : JSON / answer (응답), tag (Tool로 넘어가기)'''
+    '''
+    Request : question | ecg | temp | user_id | chat_id
+    Response : content | is_diag | is_recommend
+    '''
     try:
-        memory = make_memory(request.user_id)
+        memory = make_memory(str(request.user_id) + "/" + str(request.chat_id))
         chain = make_chain(model, retriever, memory, prompt)
         answer = run_ai(request.question, request.ecg, request.temp, chain)
 
-        tag = None
-        if "</진단>" in answer:
-            answer = answer.replace("</진단>", "")
-            tag = "진단"
-        elif "</결과>" in answer:
-            answer = answer.replace("</결과>", "")
-            tag = "결과"
-        elif "</병원>" in answer:
-            answer = answer.replace("</병원>", "")
-            tag = "병원"
+        is_diag = False
+        is_recommend = False
+        if "<진단/>" in answer:
+            answer = answer.replace("<진단/>", "")
+            is_diag = True
+        elif "<병원/>" in answer:
+            answer = answer.replace("<병원/>", "")
+            is_recommend = True
 
-        return JSONResponse(content={"answer": answer, "tag": tag},
+        return JSONResponse(content={"content": answer, "is_diag": is_diag, "is_recommend": is_recommend},
                             media_type="application/json; charset=utf-8")
     
     except Exception as e:
