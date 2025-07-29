@@ -35,7 +35,7 @@ BUFFER_SIZE       = 1000
 WINDOW_SIZE       = 187
 TOP_K             = 5
 FS                = 250  # 샘플링 주파수(Hz)
-SAVE_PATH_ECG     = r'C:\Users\user\python_project\AI_healthcare_pr\saved_ecg_windows'
+SAVE_PATH_ECG = os.path.join(os.getcwd(), "static")
 os.makedirs(SAVE_PATH_ECG, exist_ok=True)
 
 # 예측 라벨 한글로
@@ -68,7 +68,7 @@ def filter_ecg(signal, fs=250):
     return filtered
 
 # ===== ECG 예측 및 저장 함수 =====
-def get_ecg_prediction(serial_port=ECG_SERIAL_PORT, baud_rate=ECG_BAUD_RATE):
+def get_ecg_prediction(serial_port=ECG_SERIAL_PORT, baud_rate=ECG_BAUD_RATE, return_img=False):
     model = load_model(MODEL_PATH)
     buffer = deque(maxlen=BUFFER_SIZE)
 
@@ -155,10 +155,11 @@ def get_ecg_prediction(serial_port=ECG_SERIAL_PORT, baud_rate=ECG_BAUD_RATE):
     img_path = os.path.join(SAVE_PATH_ECG, img_name)
     fig.savefig(img_path)
     plt.close(fig)
-    print(f"🖼️ 그래프 저장: {img_path}")
 
-    # 9) 최종 라벨 반환
-    return label_dict[lab]
+    if return_img:
+        return label_dict[lab], img_path
+    else:
+        return label_dict[lab]
 
 # ===== 체온 측정 함수 (보정값 적용 기능 포함) =====
 def get_temperature(serial_port=TEMP_SERIAL_PORT, baud_rate=TEMP_BAUD_RATE, correction=0.0):
@@ -200,49 +201,7 @@ def get_temperature(serial_port=TEMP_SERIAL_PORT, baud_rate=TEMP_BAUD_RATE, corr
     except (serial.SerialException, ValueError) as e:
         raise RuntimeError(f"체온 읽기 오류: {e}")
 
-# ===== 개발 과정용 더미 입력 함수 =====
-def dev_get_data():
-    """
-    개발 과정 및 데모용 더미 함수.
-    사용자로부터 체온과 ECG 라벨 인덱스(0~4)를 입력받아,
-    체온은 소수점 한자리까지, ECG 라벨은 한글로 출력 후 반환합니다.
-    """
-    # 1) 사용자 입력 받기
-    temp_str = input("개발용 체온을 입력하세요 (예: 36.5): ")
-    label_str = input(
-        "개발용 ECG 라벨 인덱스를 입력하세요 "
-        "(0=정상, 1=심방성 부정맥, 2=심실성 부정맥, 3=융합 박동, 4=알 수 없음): "
-    )
-
-    # 2) 형 변환 및 유효성 검사
-    try:
-        temperature = round(float(temp_str), 1)
-    except ValueError:
-        raise ValueError(f"잘못된 체온 입력: '{temp_str}'")
-
-    try:
-        ecg_label_idx = int(label_str)
-        if ecg_label_idx not in range(5):
-            raise ValueError
-    except ValueError:
-        raise ValueError(f"ECG 라벨 인덱스는 0~4 사이의 정수여야 합니다. 입력값: '{label_str}'")
-
-    # 라벨 사전
-    label_dict = {
-        0: '정상',
-        1: '심방성 부정맥',
-        2: '심실성 부정맥',
-        3: '융합 박동',
-        4: '알 수 없음'
-    }
-    ecg_label = label_dict[ecg_label_idx]
-
-    # 3) 결과 출력
-    print(f"[개발용] 입력된 체온: {temperature:.1f}°C, 입력된 ECG 라벨: {ecg_label}")
-
-    # 4) 반환
-    return temperature, ecg_label
-
+"""
 # ===== 메인 예시 =====
 if __name__ == "__main__":
     
@@ -263,4 +222,4 @@ if __name__ == "__main__":
     # 개발 과정용 더미 입출력
     dev_temp, dev_label_idx = dev_get_data()
     print("▶ 개발용 반환값:", dev_temp, "°C,", "ECG 라벨 인덱스 =", dev_label_idx)
-    
+"""

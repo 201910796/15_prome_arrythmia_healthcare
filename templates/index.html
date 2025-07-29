@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>ECG & 체온 측정</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; }
+        h1 { margin-bottom: 30px; }
+        button { padding: 10px 20px; font-size: 16px; margin-top: 10px; }
+        img { margin-top: 20px; max-width: 600px; border: 1px solid #ccc; }
+        p.status { font-weight: bold; margin-top: 15px; }
+    </style>
+</head>
+<body>
+    <h1>🩺 부정맥 예측 시스템</h1>
+
+    <h2>1. ECG 측정</h2>
+    <form method="post" action="/ecg" onsubmit="showECGLoading()">
+        <button type="submit">📈 심전도 측정 시작</button>
+    </form>
+    <p id="ecg_loading" style="display:none; color:blue;">⏳ 심전도 측정 중...</p>
+    {% if ecg_status %}
+        <p class="status">{{ ecg_status }}</p>
+    {% endif %}
+    {% if ecg_result %}
+        <p><strong>ECG 결과:</strong> {{ ecg_result }}</p>
+    {% endif %}
+    {% if ecg_image %}
+        <h3>📊 ECG 파형</h3>
+        <img src="{{ ecg_image }}" alt="ECG Graph">
+    {% endif %}
+
+    <hr>
+
+    <h2>2. 체온 측정</h2>
+    <form method="post" action="/temperature" onsubmit="showTempLoading()">
+        <button type="submit">🌡️ 체온 측정 시작</button>
+    </form>
+    <p id="temp_loading" style="display:none; color:blue;">⏳ 체온 측정 중...</p>
+    {% if temp_status %}
+        <p class="status">{{ temp_status }}</p>
+    {% endif %}
+    {% if temp_result %}
+        <p><strong>체온:</strong> {{ temp_result }} °C</p>
+    {% endif %}
+
+    <script>
+        function showECGLoading() {
+            document.getElementById('ecg_loading').style.display = 'block';
+        }
+        function showTempLoading() {
+            document.getElementById('temp_loading').style.display = 'block';
+        }
+    </script>
+</body>
+</html>
