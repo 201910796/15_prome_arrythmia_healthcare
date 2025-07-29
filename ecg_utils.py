@@ -24,7 +24,9 @@ from tensorflow.keras.models import load_model
 import matplotlib.pyplot as plt
 import os
 import datetime
+import matplotlib
 
+matplotlib.use("Agg")  # GUI 없는 백엔드
 # ===== 공통 설정 =====
 ECG_SERIAL_PORT   = 'COM17' # 새로 산거
 ECG_BAUD_RATE     = 9600

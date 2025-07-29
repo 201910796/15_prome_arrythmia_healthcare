@@ -14,6 +14,7 @@
 <body>
     <h1>🩺 부정맥 예측 시스템</h1>
 
+    <!-- 1. ECG 측정 -->
     <h2>1. ECG 측정</h2>
     <form method="post" action="/ecg" onsubmit="showECGLoading()">
         <button type="submit">📈 심전도 측정 시작</button>
@@ -32,6 +33,7 @@
 
     <hr>
 
+    <!-- 2. 체온 측정 -->
     <h2>2. 체온 측정</h2>
     <form method="post" action="/temperature" onsubmit="showTempLoading()">
         <button type="submit">🌡️ 체온 측정 시작</button>
@@ -44,12 +46,35 @@
         <p><strong>체온:</strong> {{ temp_result }} °C</p>
     {% endif %}
 
+    <hr>
+
+    <!-- 3. 검사 완료 (심전도+체온 모두 실행 후) -->
+    <h2>3. 검사 완료</h2>
+    <form method="post" action="/ai_diag" onsubmit="showDiagLoading()">
+        <button type="submit">✅ 검사 완료</button>
+    </form>
+    <p id="diag_loading" style="display:none; color:blue;">⏳ 결과 취합 중...</p>
+    {% if diag_status %}
+        <p class="status">{{ diag_status }}</p>
+    {% endif %}
+    {% if ecg_result and temp_result %}
+        <p><strong>최종 심전도 결과:</strong> {{ ecg_result }}</p>
+        <p><strong>최종 체온:</strong> {{ temp_result }} °C</p>
+        {% if ecg_image %}
+            <h3>📊 최종 ECG 파형</h3>
+            <img src="{{ ecg_image }}" alt="ECG Graph">
+        {% endif %}
+    {% endif %}
+
     <script>
         function showECGLoading() {
             document.getElementById('ecg_loading').style.display = 'block';
         }
         function showTempLoading() {
             document.getElementById('temp_loading').style.display = 'block';
+        }
+        function showDiagLoading() {
+            document.getElementById('diag_loading').style.display = 'block';
         }
     </script>
 </body>
