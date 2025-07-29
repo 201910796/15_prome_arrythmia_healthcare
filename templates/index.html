@@ -54,17 +54,6 @@
         <button type="submit">✅ 검사 완료</button>
     </form>
     <p id="diag_loading" style="display:none; color:blue;">⏳ 결과 취합 중...</p>
-    {% if diag_status %}
-        <p class="status">{{ diag_status }}</p>
-    {% endif %}
-    {% if ecg_result and temp_result %}
-        <p><strong>최종 심전도 결과:</strong> {{ ecg_result }}</p>
-        <p><strong>최종 체온:</strong> {{ temp_result }} °C</p>
-        {% if ecg_image %}
-            <h3>📊 최종 ECG 파형</h3>
-            <img src="{{ ecg_image }}" alt="ECG Graph">
-        {% endif %}
-    {% endif %}
 
     <script>
         function showECGLoading() {
