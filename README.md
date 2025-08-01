@@ -2,7 +2,7 @@
 **당신의 심장건강 비서, 콩콩** 
 
   
-![Image](https://github.com/user-attachments/assets/51249c70-0ff7-4ef6-9f4a-18918a4ec532)
+![Image](https://github.com/user-attachments/assets/b863d18f-ad85-4730-9969-61552c45fe96)
 
 
 ## (1) 프로젝트 소개
