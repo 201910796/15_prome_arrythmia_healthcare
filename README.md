@@ -38,7 +38,7 @@
 **5. 사용자 친화적 인터페이스를 사용한 친숙**  
 - 콩콩이라는 AI 비서 캐릭터의 이름에 맞춰 통통 뛰는 듯한 인트로 모션과 사용자들이 접근하기 쉬운 UI를 사용함으로써 딱딱할 수 있는 헬스케어 앱에 대한 부드러운 이미지 확보 
 ## (2) 기술 스택
-<img src="https://img.shields.io/badge/python-3776AB?style=for-the-badge&logo=python&logoColor=white"><img src="https://img.shields.io/badge/jupyter-F37626?style=for-the-badge&logo=jupyter&logoColor=white"><img src="https://img.shields.io/badge/css-663399?style=for-the-badge&logo=css&logoColor=white"><img src="https://img.shields.io/badge/mysql-4479A1?style=for-the-badge&logo=mysql&logoColor=white"><img src="https://img.shields.io/badge/flask-000000?style=for-the-badge&logo=flask&logoColor=white">   
+<img src="https://img.shields.io/badge/python-3776AB?style=for-the-badge&logo=python&logoColor=white"><img src="https://img.shields.io/badge/jupyter-F37626?style=for-the-badge&logo=jupyter&logoColor=white"><img src="https://img.shields.io/badge/css-663399?style=for-the-badge&logo=css&logoColor=white"><img src="https://img.shields.io/badge/mysql-4479A1?style=for-the-badge&logo=mysql&logoColor=white"><img src="https://img.shields.io/badge/Node.js-5FA04E?style=for-the-badge&logo=Node.js&logoColor=white">   
 <img src="https://img.shields.io/badge/react-61DAFB?style=for-the-badge&logo=react&logoColor=white"><img src="https://img.shields.io/badge/hugging face-FFD21E?style=for-the-badge&logo=hugging face&logoColor=white"><img src="https://img.shields.io/badge/github-181717?style=for-the-badge&logo=github&logoColor=white"><img src="https://img.shields.io/badge/jira-0052CC?style=for-the-badge&logo=jira&logoColor=white">
 ## (3) 데이터 수집
 **Arrythmia Prediction Dataset**   
