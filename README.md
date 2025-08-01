@@ -10,7 +10,7 @@
 **<인공지능 연합동아리 프로메테우스 15팀>**   
 김형선 **(Team Leader & AI Model Engineer)**   
 유동균 **(AI Model Engineer)**  
-박찬영 **(Promt Engineer)**
+박찬영 **(Promt Engineer)**  
 이강룡 **(Full-Stack Developer)**   
 손채원 **(Designer)**   
 
