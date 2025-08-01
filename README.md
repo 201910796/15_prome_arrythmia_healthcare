@@ -58,7 +58,8 @@
 https://www.notion.so/ai-prometheus/15-1ad8a75b869a80d69092f73c564362fc
 **<ERD>**
 ![Image](https://github.com/user-attachments/assets/b92083ff-d681-4929-b0f7-759f518d7f7c)  
-**<시스템 아키텍처>**
+**<시스템 아키텍처>**  
+![Image](https://github.com/user-attachments/assets/690c1928-4764-4522-8851-e938a33eb128)  
 
 
 
