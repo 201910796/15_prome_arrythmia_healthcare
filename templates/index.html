@@ -2,68 +2,176 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>ECG & 체온 측정</title>
+    <title>💖 콩콩이의 심장 건강 체크</title>
     <style>
-        body { font-family: Arial, sans-serif; margin: 40px; }
-        h1 { margin-bottom: 30px; }
-        button { padding: 10px 20px; font-size: 16px; margin-top: 10px; }
-        img { margin-top: 20px; max-width: 600px; border: 1px solid #ccc; }
-        p.status { font-weight: bold; margin-top: 15px; }
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            margin: 40px;
+            background: linear-gradient(135deg, #fdfbfb, #ebedee);
+            color: #333;
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 40px;
+            font-size: 2.2em;
+            color: #eb4d4b;
+            cursor: pointer;
+        }
+        .card {
+            background: #fff;
+            border-radius: 20px;
+            padding: 25px;
+            margin: 20px auto;
+            max-width: 650px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            transition: transform 0.2s;
+        }
+        .card:hover {
+            transform: scale(1.02);
+        }
+        h2 {
+            margin-top: 0;
+            color: #2d3436;  /* 따뜻한 오렌지 색으로 변경 */
+        }
+        button {
+            background: #eb4d4b;
+            color: white;
+            padding: 12px 24px;
+            font-size: 16px;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        button:hover {
+            background: #c23616;
+        }
+        img {
+            margin-top: 20px;
+            max-width: 100%;
+            border-radius: 15px;
+            border: 2px solid #d1d8e0;
+        }
+        p.status {
+            font-weight: bold;
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 8px;
+            display: inline-block;
+        }
+        p.status.normal {
+            background: #d4f8e8;
+            color: #20bf6b;
+        }
+        p.status.abnormal {
+            background: #ffe0e0;
+            color: #eb3b5a;
+        }
+        .loading {
+            display: none;
+            margin-top: 10px;
+            color: #3867d6;
+            font-style: italic;
+        }
+        .note {
+            font-size: 14px;
+            color: #636e72;
+            margin-top: 15px;
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 10px;
+            border-left: 4px solid #eb4d4b;
+        }
+        .info {
+            font-size: 14px;
+            margin-top: 20px;
+            padding: 12px;
+            border-radius: 12px;
+            background: #fef9f9;
+            border: 1px dashed #d1d8e0;
+        }
+        .info h3 {
+            margin: 0 0 10px 0;
+            font-size: 16px;
+            color: #eb4d4b;
+        }
+        .info ul {
+            margin: 0;
+            padding-left: 20px;
+        }
+        .info li {
+            margin-bottom: 6px;
+        }
     </style>
 </head>
 <body>
-    <h1>🩺 부정맥 예측 시스템</h1>
+    <h1 onclick="resetResults()">💖 콩콩이의 심장 건강 체크</h1>
 
-    <!-- 1. ECG 측정 -->
-    <h2>1. ECG 측정</h2>
-    <form method="post" action="/ecg" onsubmit="showECGLoading()">
-        <button type="submit">📈 심전도 측정 시작</button>
-    </form>
-    <p id="ecg_loading" style="display:none; color:blue;">⏳ 심전도 측정 중...</p>
-    {% if ecg_status %}
-        <p class="status">{{ ecg_status }}</p>
-    {% endif %}
-    {% if ecg_result %}
-        <p><strong>ECG 결과:</strong> {{ ecg_result }}</p>
-    {% endif %}
-    {% if ecg_image %}
-        <h3>📊 ECG 파형</h3>
-        <img src="{{ ecg_image }}" alt="ECG Graph">
-    {% endif %}
+    <!-- ECG 측정 -->
+    <div class="card">
+        <h2>📈 심전도 측정</h2>
+        <form method="post" action="/ecg" onsubmit="showECGLoading()">
+            <button type="submit">심전도 측정 시작</button>
+        </form>
+        <p id="ecg_loading" class="loading">⏳ 심전도 측정 중...</p>
+        <div id="ecg_result_container">
+            {% if ecg_status %}
+                <p class="status {% if '정상' in ecg_result %}normal{% else %}abnormal{% endif %}">
+                    {{ ecg_status }}
+                </p>
+            {% endif %}
+            {% if ecg_result %}
+                <p><strong>결과:</strong> {{ ecg_result }}</p>
+            {% endif %}
+            {% if ecg_image %}
+                <img src="{{ ecg_image }}" alt="ECG Graph">
+                <p class="note">⚠️ 측정 기기와 환경에 따라 노이즈가 심해지면 결과가 부정확할 수 있습니다.</p>
+            {% endif %}
+        </div>
+    </div>
 
-    <hr>
+    <!-- 체온 측정 -->
+    <div class="card">
+        <h2>🌡️ 체온 측정</h2>
+        <form method="post" action="/temperature" onsubmit="showTempLoading()">
+            <button type="submit">체온 측정 시작</button>
+        </form>
+        <p id="temp_loading" class="loading">⏳ 체온 측정 중...</p>
+        <div id="temp_result_container">
+            {% if temp_status %}
+                <p class="status normal">{{ temp_status }}</p>
+            {% endif %}
+            {% if temp_result %}
+                <p><strong>체온:</strong> {{ temp_result }} °C</p>
+            {% endif %}
+        </div>
+    </div>
 
-    <!-- 2. 체온 측정 -->
-    <h2>2. 체온 측정</h2>
-    <form method="post" action="/temperature" onsubmit="showTempLoading()">
-        <button type="submit">🌡️ 체온 측정 시작</button>
-    </form>
-    <p id="temp_loading" style="display:none; color:blue;">⏳ 체온 측정 중...</p>
-    {% if temp_status %}
-        <p class="status">{{ temp_status }}</p>
-    {% endif %}
-    {% if temp_result %}
-        <p><strong>체온:</strong> {{ temp_result }} °C</p>
-    {% endif %}
-
-    <hr>
-
-    <!-- 3. 검사 완료 (심전도+체온 모두 실행 후) -->
-    <h2>3. 검사 완료</h2>
-    <form method="post" action="/ai_diag" onsubmit="showDiagLoading()">
-        <button type="submit">✅ 검사 완료</button>
-    </form>
-    <p id="diag_loading" style="display:none; color:blue;">⏳ 결과 취합 중...</p>
+    <!-- 부정맥 설명 -->
+    <div class="card info">
+        <h3>💡 알아두면 좋아요: 주요 부정맥 유형</h3>
+        <ul>
+            <li><strong>심방성 부정맥</strong>: 심방에서 비정상적으로 빠른 신호가 발생해 불규칙한 박동이 생깁니다.</li>
+            <li><strong>심실성 부정맥</strong>: 심실에서 빠른 박동이 나타나며, 어지럼증이나 가슴 두근거림을 유발할 수 있습니다.</li>
+            <li><strong>융합박동</strong>: 정상 박동과 부정맥 신호가 겹쳐 나타나는 경우로, 파형이 혼합된 형태를 보입니다.</li>
+        </ul>
+        <p style="font-size:13px; color:#666;">※ 시연용 안내이며, 실제 진단은 반드시 전문의 상담이 필요합니다.</p>
+    </div>
 
     <script>
         function showECGLoading() {
             document.getElementById('ecg_loading').style.display = 'block';
+            document.getElementById('ecg_result_container').style.display = 'none';
         }
         function showTempLoading() {
             document.getElementById('temp_loading').style.display = 'block';
+            document.getElementById('temp_result_container').style.display = 'none';
         }
-        function showDiagLoading() {
-            document.getElementById('diag_loading').style.display = 'block';
+        function resetResults() {
+            document.getElementById('ecg_loading').style.display = 'none';
+            document.getElementById('temp_loading').style.display = 'none';
+            document.getElementById('ecg_result_container').style.display = 'none';
+            document.getElementById('temp_result_container').style.display = 'none';
         }
     </script>
 </body>

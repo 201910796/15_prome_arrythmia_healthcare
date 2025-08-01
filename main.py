@@ -70,7 +70,7 @@ def temperature_measure(request: Request):
         })
 
 
-# 검사 완료 → JSON 응답 (BE 서버용)
+"""# 검사 완료 → JSON 응답 (BE 서버용)
 @app.post("/ai_diag")
 def ai_diag(request: Request):
     global last_ecg_result, last_ecg_image, last_temperature
@@ -90,3 +90,4 @@ def ai_diag(request: Request):
         "ecg_image": image_url,   # ✅ ngrok 절대경로
         "status": "✅ 전체 검사 결과"
     })
+"""
